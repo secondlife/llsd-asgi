@@ -33,15 +33,6 @@ jobs:
       - name: Build python package
         run: python -m build
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        if: matrix.python-version == '3.12'
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: PYTHON
-          fail_ci_if_error: true
-          files: .coverage.${{ steps.pyenv.outputs.value }}.xml
-
       - uses: actions/upload-artifact@v4
         if: matrix.python-version == '3.12'
         with:
