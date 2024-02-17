@@ -8,6 +8,8 @@ on:
 jobs:
   pre-commit:
     runs-on: ubuntu-latest
+    env:
+      SKIP: pytest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
