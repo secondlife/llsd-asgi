@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: [v*.*.*]
+
+jobs:
+  build:
+    name: Test & Build
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # fetch all history for setuptools_scm to be able to read tags
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install python dependencies
+        run: |
+          pip install wheel build
+          pip install .[dev]
+
+      - name: Run tests
+        run: pytest
+
+      - name: Build python package
+        run: python -m build
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.12'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          env_vars: PYTHON
+          fail_ci_if_error: true
+          files: .coverage.${{ steps.pyenv.outputs.value }}.xml
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.12'
+        with:
+          name: dist
+          path: dist
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: [ubuntu-latest]
+    permissions:
+      id-token: write
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/download-artifact@v4
+
+      - name: Test Publish package
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@release/v1
+        if: startsWith(github.event.ref, 'refs/tags/v')

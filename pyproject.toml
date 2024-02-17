@@ -1,0 +1,52 @@
+[project]
+name = "llsd-asgi"
+readme = "README.md"
+license = {text = "MIT"}
+dynamic = ["version"]
+authors = [
+    {name = "Bennett Goble", email="151138+bennettgoble@users.noreply.github.com"},
+]
+dependencies = [
+    "llsd",
+    "starlette",
+]
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/secondlife/llsd-asgi"
+
+[project.optional-dependencies]
+dev = [
+    "pytest > 6",
+    "pytest-cov",
+    "pytest-asyncio",
+    "httpx",
+]
+
+[tool.setuptools_scm]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-vv --cov=llsd_asgi --cov-report=xml"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+
+[tool.coverage.report]
+fail_under = 100
+
+[tool.pylint.exceptions]
+max-line-length = 120
