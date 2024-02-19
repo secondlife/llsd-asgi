@@ -6,15 +6,13 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
 class LLSDMiddleware:
-    def __init__(
-        self,
-        app: ASGIApp,
-    ) -> None:
+    def __init__(self, app: ASGIApp, quirks: bool = False) -> None:
         self.app = app
+        self.quirks = quirks
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http":
-            responder = _LLSDResponder(self.app)
+            responder = _LLSDResponder(self.app, self.quirks)
             await responder(scope, receive, send)
             return
         await self.app(scope, receive, send)
@@ -35,11 +33,9 @@ _CONTENT_TYPE_TO_FORMAT = {
 
 class _LLSDResponder:
 
-    def __init__(
-        self,
-        app: ASGIApp,
-    ) -> None:
+    def __init__(self, app: ASGIApp, quirks: bool = False) -> None:
         self.app = app
+        self.quirks = quirks
         self.should_decode_from_llsd_to_json = False
         self.should_encode_from_json_to_llsd = False
         self.receive: Receive = unattached_receive
@@ -61,7 +57,17 @@ class _LLSDResponder:
             self.format = _CONTENT_TYPE_TO_FORMAT[self.accept_header]
             self.should_encode_from_json_to_llsd = True
         except KeyError:
-            self.should_encode_from_json_to_llsd = False
+            # Quirks mode matches the behavior of some poorly behaved clients,
+            # which expect llsd responses even if they don't send an Accept header.
+            if self.quirks:
+                if not self.accept_header or (
+                    "*/*" in self.accept_header and "application/json" not in self.accept_header
+                ):
+                    self.format = llsd.format_xml
+                    self.should_encode_from_json_to_llsd = True
+                    self.accept_header = None
+            else:
+                self.should_encode_from_json_to_llsd = False
 
         self.receive = receive
         self.send = send
@@ -104,7 +110,7 @@ class _LLSDResponder:
 
         if message["type"] == "http.response.start":
             headers = Headers(raw=message["headers"])
-            if headers["content-type"] != "application/json":
+            if headers.get("content-type") != "application/json":
                 # Client accepts llsd, but the app did not send JSON data.
                 # (Note that it may have sent llsd-encoded data.)
                 self.should_encode_from_json_to_llsd = False
@@ -126,7 +132,11 @@ class _LLSDResponder:
             body = self.format(json.loads(body))
 
             headers = MutableHeaders(raw=self.initial_message["headers"])
-            headers["Content-Type"] = self.accept_header
+            if self.accept_header:
+                headers["Content-Type"] = self.accept_header
+            else:
+                # quirks mode allows a response without a Content-Type response header
+                del headers["Content-Type"]
             headers["Content-Length"] = str(len(body))
             message["body"] = body
 
