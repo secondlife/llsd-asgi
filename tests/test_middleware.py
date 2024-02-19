@@ -143,3 +143,40 @@ async def test_request_is_not_http() -> None:
     app = LLSDMiddleware(lifespan_only_app)
     scope = {"type": "lifespan"}
     await app(scope, mock_receive, mock_send)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "accept",
+    [(None), ("*/*"), ("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")],
+)
+async def test_quirks(accept: str) -> None:
+    app = LLSDMiddleware(JSONResponse({"message": "Hello, world!"}), quirks=True)
+
+    async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
+        headers = {}
+        if accept is None:
+            # Emulate a client that doesn't send an Accept header
+            del client._headers["accept"]
+        else:
+            headers["accept"] = accept
+        r = await client.get("/")
+        assert r.status_code == 200
+        assert "content-type" not in r.headers
+        assert llsd.parse_xml(r.content) == {"message": "Hello, world!"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "accept",
+    [("application/json,*/*")],
+)
+async def test_quirks_exceptions(accept: str) -> None:
+    app = LLSDMiddleware(JSONResponse({"message": "Hello, world!"}), quirks=True)
+
+    async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
+        client.headers["accept"] = accept
+        r = await client.get("/")
+        assert r.status_code == 200
+        assert r.headers["content-type"] == "application/json"
+        assert r.json() == {"message": "Hello, world!"}

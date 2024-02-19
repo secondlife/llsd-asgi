@@ -64,6 +64,12 @@ flowchart TD
 Your ASGI application is wrapped around the `LLSDMiddleware`, which performs
 content negotiation based on `Content-Type` and `Accept` HTTP headers.
 
+## Quirks mode
+
+Passing `quirks=True` to the middleware enables 🤪 **quirks mode**. The behavior
+of this mode matches that of poorly behaved Linden Lab services, where the
+server returns LLSD even if the client has not requested it.
+
 [FastAPI]: https://fastapi.tiangolo.com/
 [LLSD]: https://wiki.secondlife.com/wiki/LLSD
 [MessagePack]: https://msgpack.org/index.html
