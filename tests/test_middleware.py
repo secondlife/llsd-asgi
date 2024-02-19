@@ -150,7 +150,7 @@ async def test_request_is_not_http() -> None:
     "accept",
     [(None), ("*/*"), ("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")],
 )
-async def test_quirks(accept: str) -> None:
+async def test_quirks_encode(accept: str) -> None:
     app = LLSDMiddleware(JSONResponse({"message": "Hello, world!"}), quirks=True)
 
     async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
@@ -164,6 +164,25 @@ async def test_quirks(accept: str) -> None:
         assert r.status_code == 200
         assert "content-type" not in r.headers
         assert llsd.parse_xml(r.content) == {"message": "Hello, world!"}
+
+
+@pytest.mark.asyncio
+async def test_quirks_decode():
+    async def app(scope: Scope, receive: Receive, send: Send) -> None:
+        request = Request(scope, receive=receive)
+        data = await request.json()
+        message = data["message"]
+        text = f"message={message!r}"
+
+        response = PlainTextResponse(text)
+        await response(scope, receive, send)
+
+    app = LLSDMiddleware(app, quirks=True)
+
+    async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
+        r = await client.post("/", content=llsd.format_xml({"message": "Hello, world!"}))
+        assert r.status_code == 200
+        assert r.text == "message='Hello, world!'"
 
 
 @pytest.mark.asyncio

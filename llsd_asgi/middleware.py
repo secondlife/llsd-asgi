@@ -47,7 +47,9 @@ class _LLSDResponder:
         headers = MutableHeaders(scope=scope)
 
         try:
-            self.parse = _CONTENT_TYPE_TO_PARSE[headers.get("content-type")]
+            self.parse = _CONTENT_TYPE_TO_PARSE[
+                headers.get("content-type", "application/llsd+xml" if self.quirks else None)
+            ]
             self.should_decode_from_llsd_to_json = True
         except KeyError:
             self.should_decode_from_llsd_to_json = False
