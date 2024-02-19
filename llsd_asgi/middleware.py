@@ -1,4 +1,8 @@
 import json
+from base64 import b64encode
+from datetime import date, datetime
+from typing import Any
+from uuid import UUID
 
 import llsd
 from starlette.datastructures import Headers, MutableHeaders
@@ -29,6 +33,17 @@ _CONTENT_TYPE_TO_FORMAT = {
     "application/llsd+binary": llsd.format_binary,
     "application/llsd+notation": llsd.format_notation,
 }
+
+
+class JSONEncoder(json.JSONEncoder):
+    def default(self, o: Any):
+        if isinstance(o, UUID):
+            return str(o)
+        if isinstance(o, bytes):
+            return b64encode(o).decode("utf-8")
+        if isinstance(o, (datetime, date)):
+            return o.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        return super().default(o)
 
 
 class _LLSDResponder:
@@ -101,7 +116,7 @@ class _LLSDResponder:
             if message["body"] != b"":  # pragma: no cover
                 raise NotImplementedError("Streaming the request body isn't supported yet")
 
-        message["body"] = json.dumps(self.parse(body)).encode()
+        message["body"] = json.dumps(self.parse(body), cls=JSONEncoder).encode()
 
         return message
 

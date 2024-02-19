@@ -1,4 +1,7 @@
+import json
+from datetime import date, datetime
 from typing import Any, Callable
+from uuid import UUID
 
 import httpx
 import llsd
@@ -8,6 +11,7 @@ from starlette.responses import JSONResponse, PlainTextResponse, Response
 from starlette.types import Receive, Scope, Send
 
 from llsd_asgi import LLSDMiddleware
+from llsd_asgi.middleware import JSONEncoder
 from tests.utils import mock_receive, mock_send
 
 Format = Callable[[Any], bytes]
@@ -29,7 +33,7 @@ async def test_llsd_request(content_type: str, format: Format) -> None:
         content_type = request.headers["content-type"]
         data = await request.json()
         message = data["message"]
-        text = f"content_type={content_type!r} message={message!r}"
+        text = f"content_type={content_type!r} message={message!r} id={data['id']!r}"
 
         response = PlainTextResponse(text)
         await response(scope, receive, send)
@@ -37,11 +41,14 @@ async def test_llsd_request(content_type: str, format: Format) -> None:
     app = LLSDMiddleware(app)
 
     async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
-        content = {"message": "Hello, world!"}
+        content = {"message": "Hello, world!", "id": UUID("380cbef3-74de-411b-bf5c-9ad98b376b41")}
         body = format(content)
         r = await client.post("/", content=body, headers={"content-type": content_type})
         assert r.status_code == 200
-        assert r.text == "content_type='application/json' message='Hello, world!'"
+        assert (
+            r.text
+            == "content_type='application/json' message='Hello, world!' id='380cbef3-74de-411b-bf5c-9ad98b376b41'"
+        )
 
 
 @pytest.mark.asyncio
@@ -199,3 +206,23 @@ async def test_quirks_exceptions(accept: str) -> None:
         assert r.status_code == 200
         assert r.headers["content-type"] == "application/json"
         assert r.json() == {"message": "Hello, world!"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        (datetime(2024, 1, 1, 0, 0, 0), '"2024-01-01T00:00:00.000000Z"'),
+        (date(2024, 1, 1), '"2024-01-01T00:00:00.000000Z"'),
+        (UUID("c72736e5-e9e4-4779-b46b-b49467e425ff"), '"c72736e5-e9e4-4779-b46b-b49467e425ff"'),
+        (b"Hello", '"SGVsbG8="'),
+    ],
+)
+async def test_json_encoder(input: Any, expected: Any):
+    assert json.dumps(input, cls=JSONEncoder) == expected
+
+
+@pytest.mark.asyncio
+async def test_json_encoder_calls_default():
+    with pytest.raises(TypeError):
+        json.dumps(object(), cls=JSONEncoder)
