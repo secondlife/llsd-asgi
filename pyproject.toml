@@ -32,7 +32,7 @@ dev = [
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-vv --cov=llsd_asgi --cov-report=xml"
+addopts = "-vv --cov=llsd_asgi --cov-report=xml --cov-report term-missing"
 testpaths = ["tests"]
 
 [build-system]
