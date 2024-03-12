@@ -107,14 +107,9 @@ class _LLSDResponder:
         assert message["type"] == "http.request"
 
         body = message["body"]
-        more_body = message.get("more_body", False)
-        if more_body:
-            # Some implementations (e.g. HTTPX) may send one more empty-body message.
-            # Make sure they don't send one that contains a body, or it means
-            # that clients attempt to stream the request body.
+        while message.get("more_body", False):
             message = await self.receive()
-            if message["body"] != b"":  # pragma: no cover
-                raise NotImplementedError("Streaming the request body isn't supported yet")
+            body += message["body"]
 
         message["body"] = json.dumps(self.parse(body), cls=JSONEncoder).encode()
 
