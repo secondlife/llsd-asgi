@@ -52,6 +52,33 @@ async def test_llsd_request(content_type: str, format: Format) -> None:
 
 
 @pytest.mark.asyncio
+async def test_streaming_request() -> None:
+    async def app(scope: Scope, receive: Receive, send: Send) -> None:
+        request = Request(scope, receive=receive)
+        body = await request.json()
+        text = f"message={body['message']!r}"
+
+        response = PlainTextResponse(text)
+        await response(scope, receive, send)
+
+    app = LLSDMiddleware(app)
+
+    async def stream_bytes(content):
+        b = llsd.format_xml(content)
+        for chunk in range(0, len(b), 2):
+            yield b[chunk : chunk + 2]
+
+    async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
+        r = await client.post(
+            "/",
+            content=stream_bytes({"message": "Hello, world!"}),
+            headers={"content-type": "application/llsd+xml"},
+        )
+        assert r.status_code == 200
+        assert r.text == "message='Hello, world!'"
+
+
+@pytest.mark.asyncio
 async def test_non_llsd_request() -> None:
     async def app(scope: Scope, receive: Receive, send: Send) -> None:
         request = Request(scope, receive=receive)
