@@ -196,7 +196,7 @@ async def test_quirks_encode(accept: str) -> None:
             headers["accept"] = accept
         r = await client.get("/")
         assert r.status_code == 200
-        assert "content-type" not in r.headers
+        assert r.headers["content-type"] == "application/xml"
         assert llsd.parse_xml(r.content) == {"message": "Hello, world!"}
 
 
