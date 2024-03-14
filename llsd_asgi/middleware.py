@@ -147,8 +147,8 @@ class _LLSDResponder:
             if self.accept_header:
                 headers["Content-Type"] = self.accept_header
             else:
-                # quirks mode allows a response without a Content-Type response header
-                del headers["Content-Type"]
+                # quirks mode allows a response to default to application/xml instead of application/llsd+xml
+                headers["Content-Type"] = "application/xml"
             headers["Content-Length"] = str(len(body))
             message["body"] = body
 
