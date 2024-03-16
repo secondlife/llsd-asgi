@@ -22,6 +22,7 @@ Parse = Callable[[bytes], Any]
 @pytest.mark.parametrize(
     "content_type,format",
     [
+        ("application/xml", llsd.format_xml),
         ("application/llsd+xml", llsd.format_xml),
         ("application/llsd+binary", llsd.format_binary),
         ("application/llsd+notation", llsd.format_notation),
@@ -105,6 +106,7 @@ async def test_non_llsd_request() -> None:
 @pytest.mark.parametrize(
     "header,format,parse",
     [
+        ("application/xml", llsd.format_xml, llsd.parse_xml),
         ("application/llsd+xml", llsd.format_xml, llsd.parse_xml),
         ("application/llsd+binary", llsd.format_binary, llsd.parse_binary),
         ("application/llsd+notation", llsd.format_notation, llsd.parse_notation),
@@ -137,6 +139,7 @@ async def test_llsd_accepted_but_response_is_not_json() -> None:
 @pytest.mark.parametrize(
     "header,format,parse",
     [
+        ("application/xml", llsd.format_xml, llsd.parse_xml),
         ("application/llsd+xml", llsd.format_xml, llsd.parse_xml),
         ("application/llsd+binary", llsd.format_binary, llsd.parse_binary),
         ("application/llsd+notation", llsd.format_notation, llsd.parse_notation),

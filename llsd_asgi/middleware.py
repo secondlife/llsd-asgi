@@ -23,12 +23,14 @@ class LLSDMiddleware:
 
 
 _CONTENT_TYPE_TO_PARSE = {
+    "application/xml": llsd.parse_xml,
     "application/llsd+xml": llsd.parse_xml,
     "application/llsd+binary": llsd.parse_binary,
     "application/llsd+notation": llsd.parse_notation,
 }
 
 _CONTENT_TYPE_TO_FORMAT = {
+    "application/xml": llsd.format_xml,
     "application/llsd+xml": llsd.format_xml,
     "application/llsd+binary": llsd.format_binary,
     "application/llsd+notation": llsd.format_notation,
