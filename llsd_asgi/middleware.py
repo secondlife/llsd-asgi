@@ -132,7 +132,7 @@ class _LLSDResponder:
                 return
 
             # Don't send the initial message until we've determined how to
-            # modify the ougoging headers correctly.
+            # modify the outgoing headers correctly.
             self.initial_message = message
 
         elif message["type"] == "http.response.body":
